@@ -3,10 +3,8 @@ use crate::body::{Body, BodyDynamics, OrbitingBodyDynamics, StaticBodyDynamics};
 use crate::decimal_matrix_3d::DecimalMatrix3d;
 use crate::decimal_vector_3d::DecimalVector3d;
 use crate::simulation::Simulation;
-use crate::sin_cos::{cos, f64_to_dbig, sin};
-use dashu_float::ops::Abs;
+use crate::sin_cos::f64_to_dbig;
 use dashu_float::DBig;
-use std::ops::Neg;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -23,11 +21,14 @@ fn main() {
     let angle = f64_to_dbig(2.1415);
 
     let start = Instant::now();
-    let matrix = DecimalMatrix3d::axis_angle(axis.clone(), angle);
+    let matrix = DecimalMatrix3d::axis_angle(&axis, angle);
     let duration = start.elapsed();
-    axis = matrix.apply(axis.clone());
+    axis = matrix.apply(&axis);
 
-    println!("Time elapsed in expensive_function() is: {:?}", duration);
+    println!(
+        "Time elapsed in expensive_function() is: {:?}, {:?}",
+        duration, axis
+    );
 
     let moon = Body {
         name: String::from_str("moon").unwrap(),
@@ -72,4 +73,10 @@ fn main() {
     sim.update(f64_to_dbig(123123.0));
 
     println!("{:?}", sim);
+
+    let a = DecimalVector3d::from_f64(1.0, 1.0, 1.0);
+    let b = DecimalVector3d::from_f64(2.0, 2.0, 2.0);
+    let c = DecimalVector3d::from_f64(3.0, 3.0, 3.0);
+    let s = &a + &b + &c;
+    println!("a {a} b {b} c {c} s {s}");
 }

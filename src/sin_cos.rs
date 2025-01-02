@@ -1,5 +1,6 @@
 use dashu_float::ops::Abs;
 use dashu_float::DBig;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
@@ -23,17 +24,17 @@ static PIDIV2: LazyLock<DBig> = LazyLock::new(|| {
 static DBIGTEN: LazyLock<DBig> = LazyLock::new(|| DBig::from(10));
 
 pub fn sin(x: DBig, precision: i64) -> DBig {
-    let x = (x / PIMUL2.clone()).fract() * PIMUL2.clone();
+    let x = (x / PIMUL2.deref()).fract() * PIMUL2.deref();
     let mut term = x.clone();
     let mut result = x.clone();
     let mut n = 1;
-    let x_sq = x.clone() * x.clone();
+    let x_sq = &x * &x;
 
     let limit = DBIGTEN.powf(&DBig::from(-precision));
 
     while term.clone().abs() > limit {
-        term = -term * x_sq.clone() / DBig::from((2 * n) * (2 * n + 1));
-        result += term.clone();
+        term = -term * &x_sq / DBig::from((2 * n) * (2 * n + 1));
+        result += &term;
         n += 1;
     }
 
@@ -41,7 +42,7 @@ pub fn sin(x: DBig, precision: i64) -> DBig {
 }
 
 pub fn cos(x: DBig, precision: i64) -> DBig {
-    sin(x + PIDIV2.clone(), precision)
+    sin(x + PIDIV2.deref(), precision)
 }
 
 pub fn dbig_to_f64(v: &DBig) -> f64 {

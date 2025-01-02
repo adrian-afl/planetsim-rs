@@ -3,6 +3,7 @@ use crate::decimal_matrix_3d::DecimalMatrix3d;
 use crate::decimal_vector_3d::DecimalVector3d;
 use crate::sin_cos::PIMUL2;
 use dashu_float::DBig;
+use std::ops::Deref;
 
 #[derive(Debug, Clone)]
 pub struct SimulatedBody {
@@ -123,23 +124,28 @@ impl Simulation {
         result
     }
 
-    fn get_body_position(&self, time: DBig, body: &SimulatedBody) -> DecimalVector3d {
+    fn get_body_position(&self, time: &DBig, body: &SimulatedBody) -> DecimalVector3d {
         match body.clone().body.dynamics {
             BodyDynamics::Static(dynamics) => dynamics.position,
             BodyDynamics::Orbiting(dynamics) => {
                 let parent = self.get_body_by_id(body.parent.unwrap()).unwrap(); // panic if not fulfilled
-                let parent_position = parent.position.clone();
-                let orbit_progression = (time.clone() / dynamics.orbit_period).fract();
-                let angle = PIMUL2.clone() * orbit_progression;
+                let orbit_progression = (time / dynamics.orbit_period).fract();
+                let angle = PIMUL2.deref() * orbit_progression;
                 let rotation_matrix =
-                    DecimalMatrix3d::axis_angle(dynamics.orbit_plane_normal, angle);
-                rotation_matrix.apply(DecimalVector3d::new(
+                    DecimalMatrix3d::axis_angle(&dynamics.orbit_plane_normal, angle);
+                rotation_matrix.apply(&DecimalVector3d::new(
                     dynamics.orbit_radius,
                     DBig::ZERO,
                     DBig::ZERO,
-                )) + parent_position
+                )) + &parent.position
             }
         }
+    }
+
+    fn get_body_orientation(&self, time: &DBig, body: &SimulatedBody) -> DecimalMatrix3d {
+        let rotation_progression = (time / &body.body.rotation_period).fract();
+        let angle = PIMUL2.deref() * rotation_progression;
+        DecimalMatrix3d::axis_angle(&body.body.rotation_axis, angle)
     }
 
     pub fn update(&mut self, time: DBig) {
@@ -157,15 +163,17 @@ impl Simulation {
             }
         }
         for i in 0..schedule.len() {
-            let body_immutable = self.get_body_by_id(schedule[i]).unwrap().clone();
+            let body_immutable = self.get_body_by_id(schedule[i]).unwrap();
 
-            let position = self.get_body_position(time.clone(), &body_immutable);
-            let pos_second_ago = self.get_body_position(time.clone() - DBig::ONE, &body_immutable);
-            let velocity = position.clone() - pos_second_ago;
+            let position = self.get_body_position(&time, &body_immutable);
+            let pos_second_ago = self.get_body_position(&(&time - DBig::ONE), &body_immutable);
+            let velocity = &position - pos_second_ago;
+            let orientation = self.get_body_orientation(&time, &body_immutable);
 
             let body = self.get_mut_body_by_id(schedule[i]).unwrap();
             body.position = position;
             body.velocity = velocity;
+            body.orientation = orientation;
         }
     }
 }

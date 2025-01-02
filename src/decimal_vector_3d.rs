@@ -3,7 +3,7 @@ use dashu_float::DBig;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DecimalVector3d {
     pub x: DBig,
     pub y: DBig,
@@ -46,14 +46,14 @@ impl DecimalVector3d {
     }
 
     pub fn length_squared(&self) -> DBig {
-        (self.x.clone() + self.y.clone() + self.z.clone())
+        &self.x + &self.y + &self.z
     }
 
     pub fn length(&self) -> DBig {
-        (self.x.clone() + self.y.clone() + self.z.clone()).sqrt()
+        (&self.x + &self.y + &self.z).sqrt()
     }
 
-    pub fn distance_to(&self, rhs: Self) -> DBig {
+    pub fn distance_to(&self, rhs: &Self) -> DBig {
         let difference = self - rhs;
         difference.length()
     }
@@ -68,21 +68,21 @@ impl DecimalVector3d {
         self / len
     }
 
-    pub fn dot(&self, rhs: Self) -> DBig {
-        self.x.clone() * rhs.x + self.y.clone() * rhs.y + self.z.clone() * rhs.z
+    pub fn dot(&self, rhs: &Self) -> DBig {
+        &self.x * &rhs.x + &self.y * &rhs.y + &self.z * &rhs.z
     }
 
-    pub fn cross(&self, rhs: Self) -> DecimalVector3d {
+    pub fn cross(&self, rhs: &Self) -> DecimalVector3d {
         let ax = &self.x;
         let ay = &self.y;
         let az = &self.z;
-        let bx = rhs.x;
-        let by = rhs.y;
-        let bz = rhs.z;
+        let bx = &rhs.x;
+        let by = &rhs.y;
+        let bz = &rhs.z;
 
-        let x = ay.clone() * bz.clone() - az.clone() * by.clone();
-        let y = az.clone() * bx.clone() - ax.clone() * bz.clone();
-        let z = ax.clone() * by.clone() - ay.clone() * bx.clone();
+        let x = ay * bz - az * by;
+        let y = az * bx - ax * bz;
+        let z = ax * by - ay * bx;
 
         DecimalVector3d { x, y, z }
     }
@@ -91,16 +91,6 @@ impl DecimalVector3d {
 impl fmt::Display for DecimalVector3d {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{ x: {}, y: {}, z: {} }}", self.x, self.y, self.z)
-    }
-}
-
-impl Clone for DecimalVector3d {
-    fn clone(&self) -> Self {
-        DecimalVector3d {
-            x: self.x.clone(),
-            y: self.y.clone(),
-            z: self.z.clone(),
-        }
     }
 }
 
@@ -123,9 +113,9 @@ impl std::ops::Add<&DecimalVector3d> for DecimalVector3d {
 
     fn add(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x + rhs.x.clone(),
-            y: self.y + rhs.y.clone(),
-            z: self.z + rhs.z.clone(),
+            x: self.x + &rhs.x,
+            y: self.y + &rhs.y,
+            z: self.z + &rhs.z,
         }
     }
 }
@@ -135,9 +125,9 @@ impl std::ops::Add<DecimalVector3d> for &DecimalVector3d {
 
     fn add(self, rhs: DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() + rhs.x,
-            y: self.y.clone() + rhs.y,
-            z: self.z.clone() + rhs.z,
+            x: &self.x + rhs.x,
+            y: &self.y + rhs.y,
+            z: &self.z + rhs.z,
         }
     }
 }
@@ -147,9 +137,9 @@ impl std::ops::Add<&DecimalVector3d> for &DecimalVector3d {
 
     fn add(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() + rhs.x.clone(),
-            y: self.y.clone() + rhs.y.clone(),
-            z: self.z.clone() + rhs.z.clone(),
+            x: &self.x + &rhs.x,
+            y: &self.y + &rhs.y,
+            z: &self.z + &rhs.z,
         }
     }
 }
@@ -159,9 +149,9 @@ impl std::ops::Add<DBig> for DecimalVector3d {
 
     fn add(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x + rhs.clone(),
-            y: self.y + rhs.clone(),
-            z: self.z + rhs.clone(),
+            x: self.x + &rhs,
+            y: self.y + &rhs,
+            z: self.z + &rhs,
         }
     }
 }
@@ -183,9 +173,9 @@ impl std::ops::Add<DBig> for &DecimalVector3d {
 
     fn add(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() + rhs.clone(),
-            y: self.y.clone() + rhs.clone(),
-            z: self.z.clone() + rhs.clone(),
+            x: &self.x + &rhs,
+            y: &self.y + &rhs,
+            z: &self.z + &rhs,
         }
     }
 }
@@ -195,26 +185,26 @@ impl std::ops::Add<&DBig> for &DecimalVector3d {
 
     fn add(self, rhs: &DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() + rhs.clone(),
-            y: self.y.clone() + rhs.clone(),
-            z: self.z.clone() + rhs.clone(),
+            x: &self.x + rhs,
+            y: &self.y + rhs,
+            z: &self.z + rhs,
         }
     }
 }
 
 impl std::ops::AddAssign<&DBig> for DecimalVector3d {
     fn add_assign(&mut self, rhs: &DBig) {
-        self.x += rhs.clone();
-        self.y += rhs.clone();
-        self.z += rhs.clone();
+        self.x += rhs;
+        self.y += rhs;
+        self.z += rhs;
     }
 }
 
 impl std::ops::AddAssign<DBig> for DecimalVector3d {
     fn add_assign(&mut self, rhs: DBig) {
-        self.x += rhs.clone();
-        self.y += rhs.clone();
-        self.z += rhs.clone();
+        self.x += &rhs;
+        self.y += &rhs;
+        self.z += &rhs;
     }
 }
 
@@ -237,9 +227,9 @@ impl std::ops::Sub<&DecimalVector3d> for DecimalVector3d {
 
     fn sub(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x - rhs.x.clone(),
-            y: self.y - rhs.y.clone(),
-            z: self.z - rhs.z.clone(),
+            x: self.x - &rhs.x,
+            y: self.y - &rhs.y,
+            z: self.z - &rhs.z,
         }
     }
 }
@@ -249,9 +239,9 @@ impl std::ops::Sub<DecimalVector3d> for &DecimalVector3d {
 
     fn sub(self, rhs: DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() - rhs.x,
-            y: self.y.clone() - rhs.y,
-            z: self.z.clone() - rhs.z,
+            x: &self.x - rhs.x,
+            y: &self.y - rhs.y,
+            z: &self.z - rhs.z,
         }
     }
 }
@@ -261,9 +251,9 @@ impl std::ops::Sub<&DecimalVector3d> for &DecimalVector3d {
 
     fn sub(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() - rhs.x.clone(),
-            y: self.y.clone() - rhs.y.clone(),
-            z: self.z.clone() - rhs.z.clone(),
+            x: &self.x - &rhs.x,
+            y: &self.y - &rhs.y,
+            z: &self.z - &rhs.z,
         }
     }
 }
@@ -273,9 +263,9 @@ impl std::ops::Sub<DBig> for DecimalVector3d {
 
     fn sub(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x - rhs.clone(),
-            y: self.y - rhs.clone(),
-            z: self.z - rhs.clone(),
+            x: self.x - &rhs,
+            y: self.y - &rhs,
+            z: self.z - &rhs,
         }
     }
 }
@@ -297,9 +287,9 @@ impl std::ops::Sub<DBig> for &DecimalVector3d {
 
     fn sub(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() - rhs.clone(),
-            y: self.y.clone() - rhs.clone(),
-            z: self.z.clone() - rhs.clone(),
+            x: &self.x - &rhs,
+            y: &self.y - &rhs,
+            z: &self.z - &rhs,
         }
     }
 }
@@ -309,26 +299,26 @@ impl std::ops::Sub<&DBig> for &DecimalVector3d {
 
     fn sub(self, rhs: &DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() - rhs.clone(),
-            y: self.y.clone() - rhs.clone(),
-            z: self.z.clone() - rhs.clone(),
+            x: &self.x - rhs,
+            y: &self.y - rhs,
+            z: &self.z - rhs,
         }
     }
 }
 
 impl std::ops::SubAssign<&DBig> for DecimalVector3d {
     fn sub_assign(&mut self, rhs: &DBig) {
-        self.x -= rhs.clone();
-        self.y -= rhs.clone();
-        self.z -= rhs.clone();
+        self.x -= rhs;
+        self.y -= rhs;
+        self.z -= rhs;
     }
 }
 
 impl std::ops::SubAssign<DBig> for DecimalVector3d {
     fn sub_assign(&mut self, rhs: DBig) {
-        self.x -= rhs.clone();
-        self.y -= rhs.clone();
-        self.z -= rhs.clone();
+        self.x -= &rhs;
+        self.y -= &rhs;
+        self.z -= &rhs;
     }
 }
 
@@ -351,9 +341,9 @@ impl std::ops::Mul<&DecimalVector3d> for DecimalVector3d {
 
     fn mul(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x * rhs.x.clone(),
-            y: self.y * rhs.y.clone(),
-            z: self.z * rhs.z.clone(),
+            x: self.x * &rhs.x,
+            y: self.y * &rhs.y,
+            z: self.z * &rhs.z,
         }
     }
 }
@@ -363,9 +353,9 @@ impl std::ops::Mul<DecimalVector3d> for &DecimalVector3d {
 
     fn mul(self, rhs: DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() * rhs.x,
-            y: self.y.clone() * rhs.y,
-            z: self.z.clone() * rhs.z,
+            x: &self.x * rhs.x,
+            y: &self.y * rhs.y,
+            z: &self.z * rhs.z,
         }
     }
 }
@@ -375,9 +365,9 @@ impl std::ops::Mul<&DecimalVector3d> for &DecimalVector3d {
 
     fn mul(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() * rhs.x.clone(),
-            y: self.y.clone() * rhs.y.clone(),
-            z: self.z.clone() * rhs.z.clone(),
+            x: &self.x * &rhs.x,
+            y: &self.y * &rhs.y,
+            z: &self.z * &rhs.z,
         }
     }
 }
@@ -387,9 +377,9 @@ impl std::ops::Mul<DBig> for DecimalVector3d {
 
     fn mul(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x * rhs.clone(),
-            y: self.y * rhs.clone(),
-            z: self.z * rhs.clone(),
+            x: self.x * &rhs,
+            y: self.y * &rhs,
+            z: self.z * &rhs,
         }
     }
 }
@@ -411,9 +401,9 @@ impl std::ops::Mul<DBig> for &DecimalVector3d {
 
     fn mul(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() * rhs.clone(),
-            y: self.y.clone() * rhs.clone(),
-            z: self.z.clone() * rhs.clone(),
+            x: &self.x * &rhs,
+            y: &self.y * &rhs,
+            z: &self.z * &rhs,
         }
     }
 }
@@ -423,26 +413,26 @@ impl std::ops::Mul<&DBig> for &DecimalVector3d {
 
     fn mul(self, rhs: &DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() * rhs.clone(),
-            y: self.y.clone() * rhs.clone(),
-            z: self.z.clone() * rhs.clone(),
+            x: &self.x * rhs,
+            y: &self.y * rhs,
+            z: &self.z * rhs,
         }
     }
 }
 
 impl std::ops::MulAssign<&DBig> for DecimalVector3d {
     fn mul_assign(&mut self, rhs: &DBig) {
-        self.x *= rhs.clone();
-        self.y *= rhs.clone();
-        self.z *= rhs.clone();
+        self.x *= rhs;
+        self.y *= rhs;
+        self.z *= rhs;
     }
 }
 
 impl std::ops::MulAssign<DBig> for DecimalVector3d {
     fn mul_assign(&mut self, rhs: DBig) {
-        self.x *= rhs.clone();
-        self.y *= rhs.clone();
-        self.z *= rhs.clone();
+        self.x *= &rhs;
+        self.y *= &rhs;
+        self.z *= &rhs;
     }
 }
 
@@ -465,9 +455,9 @@ impl std::ops::Div<&DecimalVector3d> for DecimalVector3d {
 
     fn div(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x / rhs.x.clone(),
-            y: self.y / rhs.y.clone(),
-            z: self.z / rhs.z.clone(),
+            x: self.x / &rhs.x,
+            y: self.y / &rhs.y,
+            z: self.z / &rhs.z,
         }
     }
 }
@@ -477,9 +467,9 @@ impl std::ops::Div<DecimalVector3d> for &DecimalVector3d {
 
     fn div(self, rhs: DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() / rhs.x,
-            y: self.y.clone() / rhs.y,
-            z: self.z.clone() / rhs.z,
+            x: &self.x / rhs.x,
+            y: &self.y / rhs.y,
+            z: &self.z / rhs.z,
         }
     }
 }
@@ -489,9 +479,9 @@ impl std::ops::Div<&DecimalVector3d> for &DecimalVector3d {
 
     fn div(self, rhs: &DecimalVector3d) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() / rhs.x.clone(),
-            y: self.y.clone() / rhs.y.clone(),
-            z: self.z.clone() / rhs.z.clone(),
+            x: &self.x / &rhs.x,
+            y: &self.y / &rhs.y,
+            z: &self.z / &rhs.z,
         }
     }
 }
@@ -501,9 +491,9 @@ impl std::ops::Div<DBig> for DecimalVector3d {
 
     fn div(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x / rhs.clone(),
-            y: self.y / rhs.clone(),
-            z: self.z / rhs.clone(),
+            x: self.x / &rhs,
+            y: self.y / &rhs,
+            z: self.z / &rhs,
         }
     }
 }
@@ -525,9 +515,9 @@ impl std::ops::Div<DBig> for &DecimalVector3d {
 
     fn div(self, rhs: DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() / rhs.clone(),
-            y: self.y.clone() / rhs.clone(),
-            z: self.z.clone() / rhs.clone(),
+            x: &self.x / &rhs,
+            y: &self.y / &rhs,
+            z: &self.z / &rhs,
         }
     }
 }
@@ -537,25 +527,25 @@ impl std::ops::Div<&DBig> for &DecimalVector3d {
 
     fn div(self, rhs: &DBig) -> DecimalVector3d {
         DecimalVector3d {
-            x: self.x.clone() / rhs.clone(),
-            y: self.y.clone() / rhs.clone(),
-            z: self.z.clone() / rhs.clone(),
+            x: &self.x / rhs,
+            y: &self.y / rhs,
+            z: &self.z / rhs,
         }
     }
 }
 
 impl std::ops::DivAssign<&DBig> for DecimalVector3d {
     fn div_assign(&mut self, rhs: &DBig) {
-        self.x /= rhs.clone();
-        self.y /= rhs.clone();
-        self.z /= rhs.clone();
+        self.x /= rhs;
+        self.y /= rhs;
+        self.z /= rhs;
     }
 }
 
 impl std::ops::DivAssign<DBig> for DecimalVector3d {
     fn div_assign(&mut self, rhs: DBig) {
-        self.x /= rhs.clone();
-        self.y /= rhs.clone();
-        self.z /= rhs.clone();
+        self.x /= &rhs;
+        self.y /= &rhs;
+        self.z /= &rhs;
     }
 }
