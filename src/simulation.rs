@@ -1,17 +1,22 @@
 use crate::body::{Body, BodyDynamics};
 use crate::decimal_matrix_3d::DecimalMatrix3d;
 use crate::decimal_vector_3d::DecimalVector3d;
-use crate::sin_cos::PIMUL2;
+use crate::sin_cos::{f64_to_dbig, PIMUL2};
+use dashu_float::ops::SquareRoot;
 use dashu_float::DBig;
 use std::ops::Deref;
+use std::str::FromStr;
+use std::sync::LazyLock;
+
+static G_CONSTANT: LazyLock<DBig> = LazyLock::new(|| DBig::from_str("0.0000000000667408").unwrap());
 
 #[derive(Debug, Clone)]
 pub struct SimulatedBody {
     id: i32,
-    body: Body,
-    position: DecimalVector3d,
-    velocity: DecimalVector3d,
-    orientation: DecimalMatrix3d,
+    pub body: Body,
+    pub position: DecimalVector3d,
+    pub velocity: DecimalVector3d,
+    pub orientation: DecimalMatrix3d,
     parent: Option<i32>, // -1 means no
     satellites: Vec<i32>,
 }
@@ -49,6 +54,16 @@ impl Simulation {
         }
         self.bodies.push(simulated_body);
         new_id
+    }
+
+    fn get_body_by_name(&self, name: &str) -> Option<&SimulatedBody> {
+        for i in 0..self.bodies.len() {
+            if self.bodies[i].body.name == name {
+                return Some(&self.bodies[i]);
+            }
+        }
+
+        None
     }
 
     fn get_body_by_id(&self, id: i32) -> Option<&SimulatedBody> {
@@ -175,5 +190,74 @@ impl Simulation {
             body.velocity = velocity;
             body.orientation = orientation;
         }
+    }
+
+    pub fn get_body(&self, body_name: &str) -> &SimulatedBody {
+        self.get_body_by_name(body_name).unwrap()
+    }
+
+    pub fn get_surface_velocity(
+        &self,
+        body_name: &str,
+        relative_point: &DecimalVector3d,
+    ) -> DecimalVector3d {
+        let body = self.get_body_by_name(body_name).unwrap();
+        let axis = &body.body.rotation_axis;
+        let angular_body_vel = (PIMUL2.deref()) / &body.body.rotation_period;
+        let angular_velocity_vector = axis * angular_body_vel;
+        angular_velocity_vector.cross(&relative_point)
+    }
+
+    pub fn find_closest_static(&self, point: &DecimalVector3d) -> &SimulatedBody {
+        let mut min_distance = DBig::INFINITY;
+        let mut closest = &self.bodies[0];
+        for i in 0..self.bodies.len() {
+            match self.bodies[i].body.dynamics {
+                BodyDynamics::Static(_) => {
+                    let distance = self.bodies[i].position.distance_to(point);
+                    if (distance < min_distance) {
+                        closest = &self.bodies[i];
+                        min_distance = distance;
+                    }
+                }
+                BodyDynamics::Orbiting(_) => (),
+            }
+        }
+        closest
+    }
+
+    pub fn find_closest_body(&self, point: &DecimalVector3d) -> &SimulatedBody {
+        let closest_static = self.find_closest_static(point);
+        let down_hierarchy = self.resolve_hierarchy_down(closest_static);
+        if down_hierarchy.len() == 0 {
+            return closest_static;
+        }
+        let mut min_distance = down_hierarchy[0].position.distance_to(point);
+        let mut closest = &down_hierarchy[0];
+        for i in 1..down_hierarchy.len() {
+            let distance = down_hierarchy[i].position.distance_to(point);
+            if (distance < min_distance) {
+                closest = &down_hierarchy[i];
+                min_distance = distance;
+            }
+        }
+        closest
+    }
+
+    pub fn calculate_gravity_flux(&self, point: &DecimalVector3d) -> DecimalVector3d {
+        let closest_static = self.find_closest_static(point);
+        let mut flux = DecimalVector3d::zero();
+        let mut hierarchy = self.resolve_hierarchy_down(closest_static);
+        hierarchy.push(closest_static);
+
+        for i in 0..hierarchy.len() {
+            let body = hierarchy[i];
+            let relative = &body.position - point;
+            let length_squared = relative.length_squared();
+            let length = length_squared.sqrt();
+            let strength = G_CONSTANT.deref() * &body.body.mass / length_squared;
+            flux = flux + (relative * (&DBig::ONE / length * strength));
+        }
+        flux
     }
 }

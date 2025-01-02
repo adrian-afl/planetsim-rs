@@ -16,19 +16,7 @@ mod simulation;
 mod sin_cos;
 
 fn main() {
-    let mut axis = DecimalVector3d::from_f64(1.0, 0.2, 0.3);
-    axis.normalize();
-    let angle = f64_to_dbig(2.1415);
-
-    let start = Instant::now();
-    let matrix = DecimalMatrix3d::axis_angle(&axis, angle);
-    let duration = start.elapsed();
-    axis = matrix.apply(&axis);
-
-    println!(
-        "Time elapsed in expensive_function() is: {:?}, {:?}",
-        duration, axis
-    );
+    let ten_to_24 = DBig::from_str("1000000000000000000000000").unwrap();
 
     let moon = Body {
         name: String::from_str("moon").unwrap(),
@@ -37,6 +25,7 @@ fn main() {
             orbit_period: DBig::from(27 * 24 * 3600),
             orbit_plane_normal: DecimalVector3d::from_f64(0.0, 1.0, 0.1).normalized(),
         }),
+        mass: f64_to_dbig(0.073) * &ten_to_24,
         satellites: vec![],
         rotation_axis: DecimalVector3d::from_f64(0.3, 1.0, 0.2).normalized(),
         rotation_period: DBig::from(27 * 24 * 3600),
@@ -49,9 +38,10 @@ fn main() {
             orbit_period: DBig::from(365 * 24 * 3600),
             orbit_plane_normal: DecimalVector3d::from_f64(0.1, 1.0, 0.0).normalized(),
         }),
-        satellites: vec![moon],
-        rotation_axis: DecimalVector3d::from_f64(0.3, 1.0, 0.2).normalized(),
-        rotation_period: DBig::from(27 * 24 * 3600),
+        mass: f64_to_dbig(5.97219) * &ten_to_24,
+        satellites: vec![moon.clone()],
+        rotation_axis: DecimalVector3d::from_f64(0.0, 1.0, 0.0).normalized(),
+        rotation_period: DBig::from(24 * 3600),
     };
 
     let sun = Body {
@@ -63,7 +53,8 @@ fn main() {
                 "29349283489",
             ),
         }),
-        satellites: vec![earth],
+        mass: f64_to_dbig(1988470.0) * &ten_to_24,
+        satellites: vec![earth.clone()],
         rotation_axis: DecimalVector3d::from_f64(0.0, 1.0, 0.0).normalized(),
         rotation_period: DBig::from(7 * 24 * 3600),
     };
@@ -72,11 +63,30 @@ fn main() {
     sim.add_hierarchy(sun, None);
     sim.update(f64_to_dbig(123123.0));
 
-    println!("{:?}", sim);
+    //println!("{:?}", sim);
 
     let a = DecimalVector3d::from_f64(1.0, 1.0, 1.0);
     let b = DecimalVector3d::from_f64(2.0, 2.0, 2.0);
     let c = DecimalVector3d::from_f64(3.0, 3.0, 3.0);
     let s = &a + &b + &c;
-    println!("a {a} b {b} c {c} s {s}");
+    //println!("a {a} b {b} c {c} s {s}");
+
+    let earth_now = sim.get_body(earth.name.as_str());
+    let start = Instant::now();
+    let flux = sim.calculate_gravity_flux(
+        &(&earth_now.position + DecimalVector3d::from_f64(6371000.0, 0.0, 0.0)),
+    );
+    let duration = start.elapsed();
+    let surf_vel = sim.get_surface_velocity(
+        earth.name.as_str(),
+        &DecimalVector3d::from_f64(6371000.0, 0.0, 0.0),
+    );
+
+    println!(
+        "Time elapsed in expensive_function() is: {:?}, result is {}",
+        duration,
+        flux.length()
+    );
+
+    println!("Surf vel is {}", surf_vel.length());
 }

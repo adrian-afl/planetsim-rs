@@ -24,6 +24,7 @@ pub struct Body {
     pub name: String,
     pub rotation_axis: DecimalVector3d,
     pub rotation_period: DBig, // in seconds
+    pub mass: DBig,            // in kg
     pub dynamics: BodyDynamics,
     pub satellites: Vec<Body>,
 }

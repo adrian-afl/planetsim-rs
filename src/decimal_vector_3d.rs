@@ -46,11 +46,11 @@ impl DecimalVector3d {
     }
 
     pub fn length_squared(&self) -> DBig {
-        &self.x + &self.y + &self.z
+        &self.x * &self.x + &self.y * &self.y + &self.z * &self.z
     }
 
     pub fn length(&self) -> DBig {
-        (&self.x + &self.y + &self.z).sqrt()
+        (&self.x * &self.x + &self.y * &self.y + &self.z * &self.z).sqrt()
     }
 
     pub fn distance_to(&self, rhs: &Self) -> DBig {
@@ -90,7 +90,13 @@ impl DecimalVector3d {
 
 impl fmt::Display for DecimalVector3d {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{ x: {}, y: {}, z: {} }}", self.x, self.y, self.z)
+        write!(
+            f,
+            "{{ x: {}, y: {}, z: {} }}",
+            self.x.to_string(),
+            self.y.to_string(),
+            self.z.to_string()
+        )
     }
 }
 
