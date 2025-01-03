@@ -1,7 +1,7 @@
 use crate::body::{Body, BodyDynamics};
 use crate::decimal_matrix_3d::DecimalMatrix3d;
 use crate::decimal_vector_3d::DecimalVector3d;
-use crate::sin_cos::{f64_to_dbig, PIMUL2};
+use crate::sin_cos::PIMUL2;
 use dashu_float::ops::SquareRoot;
 use dashu_float::DBig;
 use std::ops::Deref;
@@ -215,7 +215,7 @@ impl Simulation {
             match self.bodies[i].body.dynamics {
                 BodyDynamics::Static(_) => {
                     let distance = self.bodies[i].position.distance_to(point);
-                    if (distance < min_distance) {
+                    if distance < min_distance {
                         closest = &self.bodies[i];
                         min_distance = distance;
                     }
@@ -236,7 +236,7 @@ impl Simulation {
         let mut closest = &down_hierarchy[0];
         for i in 1..down_hierarchy.len() {
             let distance = down_hierarchy[i].position.distance_to(point);
-            if (distance < min_distance) {
+            if distance < min_distance {
                 closest = &down_hierarchy[i];
                 min_distance = distance;
             }
