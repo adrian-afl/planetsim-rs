@@ -4,7 +4,6 @@ use crate::decimal_vector_3d::DecimalVector3d;
 use crate::sin_cos::PIMUL2;
 use dashu_float::ops::SquareRoot;
 use dashu_float::DBig;
-use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
@@ -27,6 +26,12 @@ pub struct Simulation {
     id_counter: i32,
 }
 
+impl Default for Simulation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Simulation {
     pub fn new() -> Self {
         Simulation {
@@ -35,7 +40,7 @@ impl Simulation {
         }
     }
 
-    pub fn add_hierarchy(&mut self, body: Body, parent: Option<i32>) -> i32 {
+    pub fn add_hierarchy(&mut self, body: &Body, parent: Option<i32>) -> i32 {
         let new_id = self.id_counter;
         self.id_counter += 1;
         let mut simulated_body = SimulatedBody {
@@ -50,7 +55,7 @@ impl Simulation {
         for i in 0..body.satellites.len() {
             simulated_body
                 .satellites
-                .push(self.add_hierarchy(body.satellites[i].clone(), Some(new_id)))
+                .push(self.add_hierarchy(&body.satellites[i], Some(new_id)));
         }
         self.bodies.push(simulated_body);
         new_id
@@ -106,7 +111,7 @@ impl Simulation {
                     Some(parent) => {
                         result.push(parent);
                         let mut sub_result = self.resolve_hierarchy_up(parent);
-                        result.append(&mut sub_result)
+                        result.append(&mut sub_result);
                     }
                 };
             }
@@ -132,7 +137,7 @@ impl Simulation {
                 Some(sat) => {
                     result.push(sat);
                     let mut sub_result = self.resolve_hierarchy_down(sat);
-                    result.append(&mut sub_result)
+                    result.append(&mut sub_result);
                 }
             };
         }
@@ -145,7 +150,7 @@ impl Simulation {
             BodyDynamics::Orbiting(dynamics) => {
                 let parent = self.get_body_by_id(body.parent.unwrap()).unwrap(); // panic if not fulfilled
                 let orbit_progression = (time / dynamics.orbit_period).fract();
-                let angle = PIMUL2.deref() * orbit_progression;
+                let angle = &*PIMUL2 * orbit_progression;
                 let rotation_matrix =
                     DecimalMatrix3d::axis_angle(&dynamics.orbit_plane_normal, angle);
                 rotation_matrix.apply(&DecimalVector3d::new(
@@ -157,13 +162,13 @@ impl Simulation {
         }
     }
 
-    fn get_body_orientation(&self, time: &DBig, body: &SimulatedBody) -> DecimalMatrix3d {
+    fn get_body_orientation(time: &DBig, body: &SimulatedBody) -> DecimalMatrix3d {
         let rotation_progression = (time / &body.body.rotation_period).fract();
-        let angle = PIMUL2.deref() * rotation_progression;
+        let angle = &*PIMUL2 * rotation_progression;
         DecimalMatrix3d::axis_angle(&body.body.rotation_axis, angle)
     }
 
-    pub fn update(&mut self, time: DBig) {
+    pub fn update(&mut self, time: &DBig) {
         let mut schedule: Vec<i32> = vec![];
         for i in 0..self.bodies.len() {
             let body = &self.bodies[i];
@@ -177,15 +182,15 @@ impl Simulation {
                 BodyDynamics::Orbiting(_) => (),
             }
         }
-        for i in 0..schedule.len() {
-            let body_immutable = self.get_body_by_id(schedule[i]).unwrap();
+        for item in schedule {
+            let body_immutable = self.get_body_by_id(item).unwrap();
 
-            let position = self.get_body_position(&time, &body_immutable);
-            let pos_second_ago = self.get_body_position(&(&time - DBig::ONE), &body_immutable);
+            let position = self.get_body_position(time, body_immutable);
+            let pos_second_ago = self.get_body_position(&(time - DBig::ONE), body_immutable);
             let velocity = &position - pos_second_ago;
-            let orientation = self.get_body_orientation(&time, &body_immutable);
+            let orientation = Self::get_body_orientation(time, body_immutable);
 
-            let body = self.get_mut_body_by_id(schedule[i]).unwrap();
+            let body = self.get_mut_body_by_id(item).unwrap();
             body.position = position;
             body.velocity = velocity;
             body.orientation = orientation;
@@ -203,9 +208,9 @@ impl Simulation {
     ) -> DecimalVector3d {
         let body = self.get_body_by_name(body_name).unwrap();
         let axis = &body.body.rotation_axis;
-        let angular_body_vel = (PIMUL2.deref()) / &body.body.rotation_period;
+        let angular_body_vel = &*PIMUL2 / &body.body.rotation_period;
         let angular_velocity_vector = axis * angular_body_vel;
-        angular_velocity_vector.cross(&relative_point)
+        angular_velocity_vector.cross(relative_point)
     }
 
     pub fn find_closest_static(&self, point: &DecimalVector3d) -> &SimulatedBody {
@@ -229,15 +234,15 @@ impl Simulation {
     pub fn find_closest_body(&self, point: &DecimalVector3d) -> &SimulatedBody {
         let closest_static = self.find_closest_static(point);
         let down_hierarchy = self.resolve_hierarchy_down(closest_static);
-        if down_hierarchy.len() == 0 {
+        if down_hierarchy.is_empty() {
             return closest_static;
         }
         let mut min_distance = down_hierarchy[0].position.distance_to(point);
         let mut closest = &down_hierarchy[0];
-        for i in 1..down_hierarchy.len() {
-            let distance = down_hierarchy[i].position.distance_to(point);
+        for item in &down_hierarchy {
+            let distance = item.position.distance_to(point);
             if distance < min_distance {
-                closest = &down_hierarchy[i];
+                closest = item;
                 min_distance = distance;
             }
         }
@@ -250,12 +255,12 @@ impl Simulation {
         let mut hierarchy = self.resolve_hierarchy_down(closest_static);
         hierarchy.push(closest_static);
 
-        for i in 0..hierarchy.len() {
-            let body = hierarchy[i];
+        for item in hierarchy {
+            let body = item;
             let relative = &body.position - point;
             let length_squared = relative.length_squared();
             let length = length_squared.sqrt();
-            let strength = G_CONSTANT.deref() * &body.body.mass / length_squared;
+            let strength = &*G_CONSTANT * &body.body.mass / length_squared;
             flux = flux + (relative * (&DBig::ONE / length * strength));
         }
         flux
